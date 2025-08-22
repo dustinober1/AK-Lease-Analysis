@@ -6,6 +6,13 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 import warnings
+from scipy import stats
+from scipy.spatial.distance import pdist, squareform
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
+
+
 warnings.filterwarnings('ignore')
 
 def load_lease_data(filepath: str) -> pd.DataFrame:
@@ -211,3 +218,193 @@ def validate_data_quality(df: pd.DataFrame) -> Dict:
         }
     
     return quality_report
+
+def calculate_morans_i(x, y, values, distance_threshold=None):
+    """Calculate Moran's I spatial autocorrelation statistic with significance testing"""
+    n = len(values)
+    
+    # Calculate distance matrix
+    coords = np.column_stack([x, y])
+    distances = squareform(pdist(coords))
+    
+    # Create spatial weights matrix (inverse distance or binary)
+    if distance_threshold is None:
+        # Use inverse distance weights
+        weights = 1 / (distances + 1e-10)  # Add small value to avoid division by zero
+        np.fill_diagonal(weights, 0)  # No self-weights
+    else:
+        # Binary weights within threshold
+        weights = (distances <= distance_threshold).astype(float)
+        np.fill_diagonal(weights, 0)
+    
+    # Normalize weights
+    row_sums = weights.sum(axis=1)
+    weights = weights / row_sums[:, np.newaxis]
+    weights[np.isnan(weights)] = 0
+    
+    # Calculate Moran's I
+    values_centered = values - np.mean(values)
+    numerator = np.sum(weights * np.outer(values_centered, values_centered))
+    denominator = np.sum(values_centered**2)
+    
+    morans_i = (n / np.sum(weights)) * (numerator / denominator)
+    
+    # Expected value and variance under null hypothesis
+    expected_i = -1 / (n - 1)
+    
+    # Simplified variance calculation
+    S0 = np.sum(weights)
+    S1 = 0.5 * np.sum((weights + weights.T)**2)
+    S2 = np.sum(np.sum(weights + weights.T, axis=1)**2)
+    
+    b2 = n * np.sum(values_centered**4) / (np.sum(values_centered**2)**2)
+    
+    variance_i = ((n*((n**2 - 3*n + 3)*S1 - n*S2 + 3*S0**2) - 
+                   b2*((n**2 - n)*S1 - 2*n*S2 + 6*S0**2)) / 
+                  ((n-1)*(n-2)*(n-3)*S0**2)) - expected_i**2
+    
+    # Z-score and p-value
+    if variance_i > 0:
+        z_score = (morans_i - expected_i) / np.sqrt(variance_i)
+        p_value = 2 * (1 - stats.norm.cdf(abs(z_score)))
+    else:
+        z_score = np.nan
+        p_value = np.nan
+    
+    return {
+        'morans_i': morans_i,
+        'expected_i': expected_i,
+        'variance_i': variance_i,
+        'z_score': z_score,
+        'p_value': p_value
+    }
+
+def getis_ord_gi_star(x, y, values, distance_threshold_km=50):
+    """Calculate Getis-Ord Gi* hot spot statistic with significance testing"""
+    n = len(values)
+    coords = np.column_stack([x, y])
+    
+    # Convert distance threshold from km to degrees (approximate)
+    distance_threshold = distance_threshold_km / 111.0  # Rough conversion
+    
+    # Calculate distances
+    distances = squareform(pdist(coords))
+    
+    gi_stats = []
+    p_values = []
+    
+    for i in range(n):
+        # Create weights for neighbors within threshold
+        weights = (distances[i] <= distance_threshold).astype(float)
+        
+        # Calculate Gi* statistic
+        if np.sum(weights) > 1:  # Need at least one neighbor
+            weighted_sum = np.sum(weights * values)
+            sum_weights = np.sum(weights)
+            
+            # Mean and variance calculations
+            mean_val = np.mean(values)
+            var_val = np.var(values)
+            
+            # Expected value and variance of Gi*
+            expected_gi = sum_weights * mean_val
+            variance_gi = (sum_weights * (n - sum_weights) * var_val) / (n - 1)
+            
+            if variance_gi > 0:
+                gi_star = (weighted_sum - expected_gi) / np.sqrt(variance_gi)
+                p_val = 2 * (1 - stats.norm.cdf(abs(gi_star)))
+            else:
+                gi_star = 0
+                p_val = 1.0
+        else:
+            gi_star = 0
+            p_val = 1.0
+        
+        gi_stats.append(gi_star)
+        p_values.append(p_val)
+    
+    return np.array(gi_stats), np.array(p_values)
+
+def optimize_dbscan_parameters(coords, eps_range=None, min_samples_range=None):
+    """Optimize DBSCAN parameters using silhouette score"""
+    if eps_range is None:
+        # Calculate reasonable eps range based on k-distance
+        k = 4
+        nbrs = NearestNeighbors(n_neighbors=k).fit(coords)
+        distances, indices = nbrs.kneighbors(coords)
+        k_distances = np.sort(distances[:, k-1])
+        
+        eps_range = np.linspace(k_distances[len(k_distances)//4], 
+                               k_distances[3*len(k_distances)//4], 10)
+    
+    if min_samples_range is None:
+        min_samples_range = range(3, min(15, len(coords)//10))
+    
+    best_score = -1
+    best_params = None
+    results = []
+    
+    from sklearn.metrics import silhouette_score
+    
+    for eps in eps_range:
+        for min_samples in min_samples_range:
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+            labels = dbscan.fit_predict(coords)
+            
+            # Calculate metrics
+            n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+            n_noise = list(labels).count(-1)
+            
+            if n_clusters > 1 and n_clusters < len(coords) - 1:
+                score = silhouette_score(coords, labels)
+                
+                results.append({
+                    'eps': eps,
+                    'min_samples': min_samples,
+                    'n_clusters': n_clusters,
+                    'n_noise': n_noise,
+                    'silhouette_score': score
+                })
+                
+                if score > best_score:
+                    best_score = score
+                    best_params = {'eps': eps, 'min_samples': min_samples}
+    
+    return best_params, results
+
+def calculate_spatial_confidence_intervals(x, y, confidence=0.95):
+    """Calculate confidence intervals for spatial center and dispersion"""
+    n = len(x)
+    
+    # Mean center
+    mean_x = np.mean(x)
+    mean_y = np.mean(y)
+    
+    # Standard errors
+    se_x = np.std(x) / np.sqrt(n)
+    se_y = np.std(y) / np.sqrt(n)
+    
+    # Confidence intervals for center
+    alpha = 1 - confidence
+    t_critical = stats.t.ppf(1 - alpha/2, n - 1)
+    
+    ci_x = (mean_x - t_critical * se_x, mean_x + t_critical * se_x)
+    ci_y = (mean_y - t_critical * se_y, mean_y + t_critical * se_y)
+    
+    # Standard distance (measure of dispersion)
+    std_distance = np.sqrt(np.mean((x - mean_x)**2 + (y - mean_y)**2))
+    
+    # Confidence interval for standard distance
+    distances = np.sqrt((x - mean_x)**2 + (y - mean_y)**2)
+    se_std_dist = np.std(distances) / np.sqrt(n)
+    ci_std_dist = (std_distance - t_critical * se_std_dist, 
+                   std_distance + t_critical * se_std_dist)
+    
+    return {
+        'mean_center': (mean_x, mean_y),
+        'ci_center_x': ci_x,
+        'ci_center_y': ci_y,
+        'standard_distance': std_distance,
+        'ci_standard_distance': ci_std_dist,
+        'n': n
+    }

@@ -52,9 +52,15 @@ AK-Lease-Analysis/
    cd AK-Lease-Analysis
    ```
 
-2. **Install dependencies**
+2. **Create and activate a virtual environment**
    ```bash
-   pip install -r requirements.txt
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.lock
    ```
 
 3. **Launch Jupyter Notebook**
