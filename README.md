@@ -9,7 +9,7 @@ This project analyzes federal oil and gas leasing data from Alaska's Outer Conti
 ## 📊 Key Findings
 
 - **Dataset**: 2,446 lease records spanning multiple decades (1976-2024)
-- **Total Bid Value**: Over $500 million in lease bids analyzed
+- **Total Bid Value**: Over $8.1 billion in lease bids analyzed
 - **Geographic Coverage**: Multiple planning areas including Beaufort Sea (60%+ of leases), Cook Inlet, and Gulf of Alaska
 - **Temporal Range**: Lease sales from 1976 to present with peak activity in 1980s and early 2000s
 - **Active Status**: 15% active leases, 85% inactive/expired with clear lifecycle patterns
@@ -27,7 +27,8 @@ AK-Lease-Analysis/
 │   ├── 01_data_exploration.ipynb     # Initial data exploration and quality assessment
 │   ├── 02_geospatial_analysis.ipynb  # Geographic analysis & interactive mapping
 │   ├── 03_statistical_analysis.ipynb # Statistical modeling & clustering
-│   └── 04_advanced_statistical_methods.ipynb # Bayesian, time series, survival analysis
+│   ├── 04_advanced_statistical_methods.ipynb # Bayesian, time series, survival analysis
+│   └── 05_economic_impact_modeling.ipynb # Economic impact & market dynamics analysis
 ├── visualizations/                    # Generated plots and maps
 │   ├── alaska_leases_map.html        # Interactive Folium map
 │   └── correlation_matrix.png        # Statistical correlation heatmap
@@ -83,6 +84,7 @@ AK-Lease-Analysis/
    - `02_geospatial_analysis.ipynb` - Geographic patterns and interactive mapping
    - `03_statistical_analysis.ipynb` - Machine learning models and clustering
    - `04_advanced_statistical_methods.ipynb` - Bayesian, time series, and survival analysis
+   - `05_economic_impact_modeling.ipynb` - Economic impact & market dynamics analysis
 
 ## 📈 Analysis Components
 
@@ -115,6 +117,12 @@ AK-Lease-Analysis/
 - **Survival Analysis**: Kaplan-Meier estimation for lease lifecycle modeling
 - **Causal Inference**: Propensity score matching for policy impact assessment
 
+### 5. Economic Impact & Market Dynamics
+- **Economic Impact Assessment**: $19.5B total economic impact with multiplier effects
+- **Market Competition Analysis**: HHI-based market concentration metrics
+- **Financial Risk Modeling**: Monte Carlo simulation with 10,000 scenarios
+- **Policy Impact Quantification**: Revenue optimization and regulatory cost-benefit analysis
+
 ## 🛠️ Technologies Used
 
 ### Core Data Science Stack
@@ -145,6 +153,8 @@ AK-Lease-Analysis/
 6. **Survival Curves**: Kaplan-Meier lease lifecycle analysis
 7. **Bayesian Model Results**: Posterior distributions and uncertainty quantification
 8. **Causal Inference**: Propensity score matching visualization and treatment effects
+9. **Economic Impact Visualization**: Market dynamics, risk distributions, policy scenarios
+10. **Monte Carlo Risk Analysis**: Value-at-Risk and probability distributions
 
 ## 🔍 Analytical Insights & Business Value
 
@@ -171,6 +181,14 @@ AK-Lease-Analysis/
 - **Royalty Rate Analysis**: Causal inference shows statistical relationship with lease performance
 - **Environmental Planning**: Geographic clustering enables focused regulatory oversight
 - **Revenue Optimization**: Data-driven insights for optimal sale timing and location selection
+
+### Economic Impact & Investment Intelligence
+- **Total Economic Impact**: $19.5B with 2.4x multiplier effect across Alaska economy
+- **Job Creation**: 69,124 estimated jobs at $8.5 per million invested
+- **Market Concentration**: HHI = 1,016 indicating healthy competitive market structure
+- **Risk Assessment**: 22.4% probability of profit with high volatility but massive upside potential
+- **Optimal Timing**: $30-50/barrel oil price windows provide 23.6x revenue multiplier
+- **Policy Optimization**: Streamlined regulatory process maximizes social value
 
 ## 📝 Data Sources
 
